@@ -76,8 +76,8 @@ services:
     volumes:
       # Mount Docker registry credentials for private image authentication (read-only)
       - /root/.docker/config.json:/config.json:ro
-    # Check for updates every 300 seconds (5 minutes) - adjust as needed for your environment
-    command: --interval 300
+    # Check for updates every 120 seconds (2 minutes) - adjust as needed for your environment
+    command: --interval 120
     depends_on:
       - docker-socket-proxy
 
