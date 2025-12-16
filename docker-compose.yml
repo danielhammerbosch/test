@@ -61,6 +61,7 @@ services:
       - docker-socket-proxy
 
   # Watchtower - Automated container updates
+  # Monitors running containers and automatically updates them when new images are available
   watchtower:
     image: containrrr/watchtower
     container_name: "watchtower"
@@ -70,10 +71,13 @@ services:
     networks:
       - proxy
     environment:
+      # Connect to Docker via socket proxy instead of direct socket mount for security
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
     volumes:
+      # Mount Docker registry credentials for private image authentication (read-only)
       - /root/.docker/config.json:/config.json:ro
-    command: --interval 300  # Changed from 30s to 300s (5 minutes) to reduce load; adjust as needed for your environment
+    # Check for updates every 300 seconds (5 minutes) - adjust as needed for your environment
+    command: --interval 300
     depends_on:
       - docker-socket-proxy
 
