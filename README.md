@@ -47,9 +47,10 @@ Launch all containers:
 docker compose up -d
 ```
 
-This starts three services:
+This starts four services:
 - **docker-socket-proxy**: Secures Docker API access
 - **traefik**: Reverse proxy and load balancer
+- **watchtower**: Automated container updates
 - **whoami**: Test service
 
 ### 5. Verify Services are Running
@@ -88,6 +89,55 @@ http://whoami.docker.localhost
 ```
 
 This displays HTTP request information.
+
+## Watchtower - Automated Updates
+
+Watchtower automatically monitors your running containers and updates them when new versions of their images are available.
+
+### How It Works
+
+Watchtower:
+- Checks for new image versions every 2 minutes (configurable)
+- Automatically pulls new images when available
+- Gracefully stops and restarts containers with new versions
+- Uses Docker Socket Proxy for secure API access
+
+### Configuration
+
+The update interval is set to 120 seconds by default. To change this, edit the `docker-compose.yml` file:
+
+```yaml
+watchtower:
+  command: --interval 300  # Check every 5 minutes
+```
+
+### Private Registry Support
+
+If you use private Docker registries, Watchtower can authenticate using your Docker credentials:
+
+1. Ensure you're logged in to your registry:
+   ```bash
+   docker login <your-registry>
+   ```
+
+2. The credentials are automatically available to Watchtower via the mounted `config.json` file.
+
+### Excluding Services from Auto-Updates
+
+To prevent Watchtower from updating specific containers, add the following label to them:
+
+```yaml
+labels:
+  - "com.centurylinklabs.watchtower.enable=false"
+```
+
+### Monitoring Updates
+
+View Watchtower's activity in the logs:
+
+```bash
+docker compose logs -f watchtower
+```
 
 ## Managing Services
 
@@ -164,9 +214,9 @@ Ensure ports 80 and 8080 are not in use by other applications.
 ### Docker Socket Proxy
 
 This setup uses Docker Socket Proxy for security.
-- Restricts Traefik's access to Docker API
+- Restricts Traefik's and Watchtower's access to Docker API
 - Prevents root-level host access
-- Only exposes necessary endpoints
+- Only exposes necessary endpoints (CONTAINERS, NETWORKS, SERVICES, TASKS, IMAGES)
 
 ### Production Deployment
 
@@ -202,3 +252,4 @@ my-service:
 - [Traefik Documentation](https://doc.traefik.io/traefik/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Docker Socket Proxy](https://github.com/Tecnativa/docker-socket-proxy)
+- [Watchtower Documentation](https://containrrr.dev/watchtower/)
