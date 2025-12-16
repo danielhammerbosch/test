@@ -97,7 +97,7 @@ Watchtower automatically monitors your running containers and updates them when 
 ### How It Works
 
 Watchtower:
-- Checks for new image versions every 2 minutes (configurable)
+- Checks for new image versions every 120 seconds (2 minutes) by default - configurable
 - Automatically pulls new images when available
 - Gracefully stops and restarts containers with new versions
 - Uses Docker Socket Proxy for secure API access
@@ -120,7 +120,7 @@ If you use private Docker registries, Watchtower can authenticate using your Doc
    docker login <your-registry>
    ```
 
-2. The credentials are automatically available to Watchtower via the mounted `config.json` file.
+2. The credentials are automatically available to Watchtower via the mounted `config.json` file (configured in `docker-compose.yml`).
 
 ### Excluding Services from Auto-Updates
 
