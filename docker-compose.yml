@@ -1,4 +1,6 @@
 services:
+  # Docker Socket Proxy - Restricts Docker API access for security
+  # Only exposes necessary endpoints to Traefik, preventing root access to the host
   docker-socket-proxy:
     image: "tecnativa/docker-socket-proxy"
     container_name: "docker-socket-proxy"
@@ -8,13 +10,16 @@ services:
     networks:
       - proxy
     environment:
+      # Grant access only to required Docker API endpoints
       - CONTAINERS=1
       - NETWORKS=1
       - SERVICES=1
       - TASKS=1
     volumes:
+      # Only the proxy has direct access to the Docker socket
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
+  # Traefik - Reverse proxy and load balancer
   traefik:
     image: "traefik:v3.4"
     container_name: "traefik"
@@ -24,29 +29,37 @@ services:
     networks:
       - proxy
     command:
+      # Docker provider configuration
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=proxy"
+      # Connect to Docker via socket proxy instead of direct socket mount
       - "--providers.docker.endpoint=tcp://docker-socket-proxy:2375"
+      # Entry points configuration
       - "--entryPoints.web.address=:80"
       - "--entryPoints.dashboard.address=:8080"
+      # API and dashboard configuration
       - "--api.dashboard=true"
       - "--api.insecure=false"
     ports:
-      - "80:80"
-      - "8080:8080"
+      - "80:80"      # HTTP entry point
+      - "8080:8080"  # Dashboard entry point
     environment:
+      # Dashboard authentication credentials (required)
       - TRAEFIK_DASHBOARD_USERS=${TRAEFIK_DASHBOARD_USERS}
     labels:
       - "traefik.enable=true"
+      # Dashboard routing - accessible at http://traefik.docker.localhost:8080
       - "traefik.http.routers.dashboard.rule=Host(`traefik.docker.localhost`)"
       - "traefik.http.routers.dashboard.entrypoints=dashboard"
       - "traefik.http.routers.dashboard.service=api@internal"
+      # Basic authentication for dashboard
       - "traefik.http.routers.dashboard.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
     depends_on:
       - docker-socket-proxy
 
+  # Whoami - Example service for testing Traefik routing
   whoami:
     image: "traefik/whoami"
     restart: unless-stopped
@@ -54,6 +67,7 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
+      # Accessible at http://whoami.docker.localhost
       - "traefik.http.routers.whoami.rule=Host(`whoami.docker.localhost`)"
       - "traefik.http.routers.whoami.entrypoints=web"
 
