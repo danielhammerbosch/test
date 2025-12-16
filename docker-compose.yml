@@ -15,6 +15,7 @@ services:
       - NETWORKS=1
       - SERVICES=1
       - TASKS=1
+      - IMAGES=1  # Required for Watchtower to pull new images
     volumes:
       # Only the proxy has direct access to the Docker socket
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
@@ -56,6 +57,27 @@ services:
       # Basic authentication for dashboard
       - "traefik.http.routers.dashboard.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
+    depends_on:
+      - docker-socket-proxy
+
+  # Watchtower - Automated container updates
+  # Monitors running containers and automatically updates them when new images are available
+  watchtower:
+    image: containrrr/watchtower
+    container_name: "watchtower"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    environment:
+      # Connect to Docker via socket proxy instead of direct socket mount for security
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    volumes:
+      # Mount Docker registry credentials for private image authentication (read-only)
+      - /root/.docker/config.json:/config.json:ro
+    # Check for updates every 120 seconds (2 minutes) - adjust as needed for your environment
+    command: --interval 120
     depends_on:
       - docker-socket-proxy
 
