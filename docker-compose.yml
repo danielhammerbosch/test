@@ -15,6 +15,7 @@ services:
       - NETWORKS=1
       - SERVICES=1
       - TASKS=1
+      - IMAGES=1  # Required for Watchtower to pull new images
     volumes:
       # Only the proxy has direct access to the Docker socket
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
@@ -59,12 +60,22 @@ services:
     depends_on:
       - docker-socket-proxy
 
-watchtower:
+  # Watchtower - Automated container updates
+  watchtower:
     image: containrrr/watchtower
+    container_name: "watchtower"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    environment:
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /root/.docker/config.json:/config.json
+      - /root/.docker/config.json:/config.json:ro
     command: --interval 300  # Changed from 30s to 300s (5 minutes) to reduce load; adjust as needed for your environment
+    depends_on:
+      - docker-socket-proxy
 
   # Whoami - Example service for testing Traefik routing
   whoami:
