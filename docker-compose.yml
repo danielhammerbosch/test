@@ -1,4 +1,20 @@
 services:
+  docker-socket-proxy:
+    image: "tecnativa/docker-socket-proxy"
+    container_name: "docker-socket-proxy"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    environment:
+      - CONTAINERS=1
+      - NETWORKS=1
+      - SERVICES=1
+      - TASKS=1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
   traefik:
     image: "traefik:v3.4"
     container_name: "traefik"
@@ -11,12 +27,23 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=proxy"
+      - "--providers.docker.endpoint=tcp://docker-socket-proxy:2375"
       - "--entryPoints.web.address=:80"
+      - "--entryPoints.dashboard.address=:8080"
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
     ports:
       - "80:80"
       - "8080:8080"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.docker.localhost`)"
+      - "traefik.http.routers.dashboard.entrypoints=dashboard"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$H6uskkkW$$IgXLP6ewTrSuBkTrqE8wj/"
+    depends_on:
+      - docker-socket-proxy
 
   whoami:
     image: "traefik/whoami"
